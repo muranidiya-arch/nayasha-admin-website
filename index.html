@@ -48,7 +48,9 @@
 
     html {
       scroll-behavior: smooth;
-      -webkit-text-size-adjust: 100%
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+      width: 100%;
     }
 
     body {
@@ -56,7 +58,9 @@
       background: var(--cream);
       color: var(--ink);
       min-height: 100vh;
-      overflow-x: hidden
+      overflow-x: hidden;
+      width: 100%;
+      position: relative;
     }
 
     ::-webkit-scrollbar {
@@ -4318,12 +4322,53 @@
 
       header .h-top {
         padding: 0 16px;
-        grid-template-columns: auto 1fr auto
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
 
       .h-left {
         display: none
       }
+
+      .h-logo img {
+        width: 140px !important;
+        height: auto !important;
+      }
+
+      .h-bag {
+        padding: 10px;
+        border-radius: 50%;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .h-bag > span {
+        font-size: 0;
+      }
+      .h-bag #cart-count {
+        font-size: 9px;
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        background: var(--g);
+        color: var(--ink);
+        border-radius: 50%;
+        width: 17px;
+        height: 17px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid var(--ink);
+        font-weight: 700;
+        z-index: 2;
+      }
+      .ldr-emblem { width: 50px; height: 50px; }
+      .ldr-ring { width: 50px; height: 50px; }
+      .ldr-ring2 { width: 36px; height: 36px; top: 7px; left: 7px; }
+      .ldr-logo { font-size: 28px; letter-spacing: 8px; }
 
       .section,
       .lookbook-sec,
@@ -5164,7 +5209,7 @@
         <div class="prod-grid" id="product-grid" style="display:none"></div>
         <div id="load-more-wrap">
           <button class="btn-primary" id="load-more-btn" onclick="loadMore()">
-            <span>Load More</span>
+            <span>View all items</span>
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -5655,17 +5700,18 @@
   </div>
 
   <!-- PRODUCT MODAL -->
-  <div class="modal-bg" id="product-modal-overlay" onclick="closeProductModal()">
-    <div class="modal" id="product-modal" onclick="event.stopPropagation()" style="max-width: 800px; width: 95%;">
-      <div class="modal-head">
-        <div class="modal-title">Product Details</div>
-        <button class="d-close" onclick="closeProductModal()"><svg width="20" height="20" fill="none"
-            stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg></button>
+  <div class="modal-bg" id="product-modal-overlay" style="background:var(--cream); backdrop-filter:none; z-index:1000;">
+    <div class="modal" id="product-modal" style="max-width: 100%; width: 100vw; height: 100vh; overflow-y: auto; overflow-x: hidden; border-radius: 0; box-shadow: none; display: flex; flex-direction: column; margin: 0; border: none; background: var(--cream);">
+      <div class="modal-head" style="border-bottom: 1px solid var(--bd); padding: 16px 24px; position: sticky; top: 0; background: var(--cream); z-index: 10; display: flex; align-items: center; justify-content: flex-start; gap: 16px;">
+        <button class="d-close" onclick="closeProductModal()" style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--ink); color:var(--cream); border-radius:2px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; cursor:pointer; border:none; transition:opacity .2s;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+          Back
+        </button>
       </div>
-      <div class="modal-body" id="product-modal-body" style="padding: 0;">
+      <div class="modal-body" id="product-modal-body" style="padding: 0; flex: 1; max-width: 1200px; margin: 0 auto; width: 100%;">
         <!-- Dynamic Content -->
       </div>
     </div>
@@ -5874,7 +5920,7 @@ async function api(action, data = {}) {
     let activeCat = 'All', currentView = 'grid', filtersOpen = false;
     let priceMax = 50000, couponApplied = false, selectedPayment = 'Online';
     let allOrdersCache = [], filteredCache = [], currentPage = 1;
-    const PAGE_SIZE = 12;
+    const PAGE_SIZE = 10;
     const ADMIN_PASSWORD = 'Abc@123';
     let adminAuthenticated = false;
 
@@ -6082,7 +6128,7 @@ async function api(action, data = {}) {
       cl.textContent = f.length !== allProducts.length ? `${f.length} result${f.length !== 1 ? 's' : ''}` : '';
     }
 
-    function loadMore() { currentPage++; renderProducts(filteredCache.slice(0, currentPage * PAGE_SIZE)); document.getElementById('load-more-wrap').style.display = filteredCache.length > currentPage * PAGE_SIZE ? 'block' : 'none' }
+    function loadMore() { renderProducts(filteredCache); document.getElementById('load-more-wrap').style.display = 'none'; }
 
     function updatePriceFilter(v) {
       priceMax = Number(v);
@@ -6266,7 +6312,7 @@ async function api(action, data = {}) {
       const row = document.getElementById('trending-row');
       const trending = [...allProducts].sort(() => Math.random() - .5).slice(0, 12);
       row.innerHTML = trending.map((p, i) => `
-    <div class="t-card" onclick="addToCart(${allProducts.indexOf(p)})">
+    <div class="t-card" onclick="cardClick(${allProducts.indexOf(p)})">
       <div class="t-img-wrap">
         ${p.ThumbnailURL ? `<img class="t-img" src="${p.ThumbnailURL}" alt="${escH(p.Name)}" loading="lazy">` :
           `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--warm)"><div class="devnagari" style="font-size:44px;color:var(--bd2)">${getCatDeco(p.Category)}</div></div>`}
@@ -6352,9 +6398,9 @@ async function api(action, data = {}) {
       else cart.push({ ...p, qty: 1 });
       saveCart(); renderCartCount(); showToast(`${p.Name} added to bag`, 'ok');
     }
-    function removeFromCart(id) { cart = cart.filter(c => c.ID !== id); saveCart(); renderCartCount(); renderCartDrawer() }
+    function removeFromCart(id) { cart = cart.filter(c => String(c.ID) !== String(id)); saveCart(); renderCartCount(); renderCartDrawer() }
     function updateQty(id, d) {
-      const item = cart.find(c => c.ID === id); if (!item) return;
+      const item = cart.find(c => String(c.ID) === String(id)); if (!item) return;
       const max = Number(item.Quantity) || 99; const nq = Math.max(0, Math.min(max, item.qty + d));
       if (nq === 0) { removeFromCart(id); return } item.qty = nq; saveCart(); renderCartCount(); renderCartDrawer();
     }
