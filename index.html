@@ -49,6 +49,8 @@
     html {
       scroll-behavior: smooth;
       -webkit-text-size-adjust: 100%;
+      overflow-x: clip;
+      max-width: 100%;
     }
 
     body {
@@ -56,7 +58,8 @@
       background: var(--cream);
       color: var(--ink);
       min-height: 100vh;
-      overflow-x: hidden;
+      overflow-x: clip;
+      max-width: 100%;
     }
 
     ::-webkit-scrollbar {
@@ -4443,6 +4446,11 @@
       .toast {
         max-width: 100%
       }
+
+      .ldr-logo { font-size: 20px !important; letter-spacing: 6px !important; }
+      .ldr-sub { font-size: 8px !important; letter-spacing: 2px !important; padding: 0 16px; text-align: center; line-height: 1.4; white-space: normal; width: 100%; box-sizing: border-box; }
+      .ldr-emblem, .ldr-ring { width: 44px !important; height: 44px !important; }
+      .ldr-ring2 { width: 30px !important; height: 30px !important; top: 7px !important; left: 7px !important; }
     }
 
     @media(max-width:600px) {
@@ -4753,7 +4761,7 @@
   </div>
 
   <!-- ═══════════════════════════ SHOP PANEL ═══════════════════════════ -->
-  <div id="shop-panel" style="max-width: 100vw; overflow-x: hidden;">
+  <div id="shop-panel" style="max-width: 100%; overflow-x: hidden;">
 
     <!-- HERO SLIDER -->
     <section class="hero-slider-wrap" id="hero-slider-wrap">
