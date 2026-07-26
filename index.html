@@ -739,6 +739,7 @@
                             <th>Items</th>
                             <th>Total</th>
                             <th>Status</th>
+                            <th>Shiprocket</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -881,6 +882,85 @@
         </div>
     </div>
 
+    <!-- SHIPROCKET MODAL OVERLAY -->
+    <div id="shiprocket-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+        <div style="background:#fff; width:100%; max-width:600px; max-height:90vh; overflow-y:auto; padding:40px; border-radius:4px; box-shadow:var(--sh); position:relative; box-sizing:border-box;">
+            <button onclick="closeShiprocketModal()" style="position:absolute; top:20px; right:20px; font-size:28px; background:none; border:none; cursor:pointer; color:var(--muted); line-height:1;">&times;</button>
+            <h3 style="font-family:'Cormorant Garamond',serif; font-size:28px; margin:0 0 10px; color:var(--ink);">Ship with Shiprocket</h3>
+            <p style="font-size:13px; color:var(--muted); margin:0 0 24px; text-transform:uppercase; letter-spacing:1px;">Create Adhoc Order & Shipment</p>
+            
+            <form id="shiprocketForm">
+                <input type="hidden" id="sr-order-id">
+                
+                <div class="fg">
+                    <label>Customer Name</label>
+                    <input type="text" id="sr-customer-name" readonly style="background:#fafafa; color:#666;">
+                </div>
+                
+                <div class="fg">
+                    <label>Shipping Address</label>
+                    <textarea id="sr-address" readonly style="background:#fafafa; color:#666; height:60px;"></textarea>
+                </div>
+                
+                <div class="frow">
+                    <div class="fg">
+                        <label>City</label>
+                        <input type="text" id="sr-city" readonly style="background:#fafafa; color:#666;">
+                    </div>
+                    <div class="fg">
+                        <label>State</label>
+                        <input type="text" id="sr-state" readonly style="background:#fafafa; color:#666;">
+                    </div>
+                </div>
+
+                <div class="frow">
+                    <div class="fg">
+                        <label>Pincode</label>
+                        <input type="text" id="sr-pincode" readonly style="background:#fafafa; color:#666;">
+                    </div>
+                    <div class="fg">
+                        <label>Payment Method</label>
+                        <input type="text" id="sr-payment-method" readonly style="background:#fafafa; color:#666;">
+                    </div>
+                </div>
+
+                <div class="fg">
+                    <label>Pickup Location Name * (As configured in Shiprocket)</label>
+                    <input type="text" id="sr-pickup-location" value="Primary" required placeholder="e.g. Primary">
+                </div>
+
+                <div style="border-top:1px solid var(--bd); margin:20px 0; padding-top:20px;">
+                    <h4 style="font-family:'Cormorant Garamond',serif; font-size:18px; margin:0 0 16px;">Package Specifications</h4>
+                    
+                    <div class="frow">
+                        <div class="fg">
+                            <label>Weight (kg) *</label>
+                            <input type="number" id="sr-weight" value="0.5" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="fg">
+                            <label>Length (cm) *</label>
+                            <input type="number" id="sr-length" value="10" step="1" min="1" required>
+                        </div>
+                    </div>
+                    <div class="frow">
+                        <div class="fg">
+                            <label>Breadth (cm) *</label>
+                            <input type="number" id="sr-breadth" value="10" step="1" min="1" required>
+                        </div>
+                        <div class="fg">
+                            <label>Height (cm) *</label>
+                            <input type="number" id="sr-height" value="5" step="1" min="1" required>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="srSubmitBtn" style="background:#704214; color:#fff;">
+                    <span>Process Shiprocket Order</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbx0_jPu9CquI0G1XM5-BEs4LP6VWiFvt_LlEuzoAFMyEbM3gaYq8Vbz8NuKci-0AtWp/exec';
 
@@ -908,15 +988,16 @@
             const cardsContainer = document.getElementById('order-cards-list');
             const loadingHtml = '<div style="text-align:center; padding:40px; color:var(--muted)"><div class="spin" style="display:inline-block; border-top-color:var(--primary); width:24px; height:24px; margin-bottom:12px;"></div><div>Fetching orders...</div></div>';
             
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--muted)">Fetching orders...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--muted)">Fetching orders...</td></tr>';
             if (cardsContainer) cardsContainer.innerHTML = loadingHtml;
             
             try {
                 const orders = await api('getOrders');
-                renderOrders(orders);
-                calculateAnalytics(orders);
+                allOrdersCache = Array.isArray(orders) ? orders : [];
+                renderOrders(allOrdersCache);
+                calculateAnalytics(allOrdersCache);
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--err)">Error: ${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--err)">Error: ${err.message}</td></tr>`;
                 if (cardsContainer) cardsContainer.innerHTML = `<div style="text-align:center; padding:40px; color:var(--err)">Error: ${err.message}</div>`;
             }
         }
@@ -926,7 +1007,7 @@
             const cardsContainer = document.getElementById('order-cards-list');
             
             if (!orders || !orders.length) {
-                const noOrdersHtml = '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--muted)">No orders found.</td></tr>';
+                const noOrdersHtml = '<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--muted)">No orders found.</td></tr>';
                 tbody.innerHTML = noOrdersHtml;
                 if (cardsContainer) cardsContainer.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted)">No orders found.</div>';
                 return;
@@ -947,6 +1028,13 @@
                 const date = new Date(o.Date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
                 const statusClass = 'status-' + (o.Status || 'Pending').toLowerCase();
 
+                const srHtml = o.ShiprocketOrderID 
+                    ? `<div style="font-size:11px; font-weight:700; color:var(--ok)">ID: ${o.ShiprocketOrderID}</div>
+                       <div style="font-size:9px; color:var(--muted)">Shipment: ${o.ShiprocketShipmentID}</div>`
+                    : (o.Status === 'Cancelled' 
+                        ? `<span style="color:var(--muted)">—</span>` 
+                        : `<button class="status-pill" style="border:none; cursor:pointer; font-weight:700; background:var(--primary); color:var(--white); padding:6px 12px; margin:0;" onclick="openShiprocketModal('${o.OrderID}')">Ship with SR</button>`);
+
                 return `
                     <tr data-order-id="${o.OrderID}">
                         <td>${date}</td>
@@ -958,6 +1046,7 @@
                         <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${itemsStr}">${itemsStr}</td>
                         <td style="font-weight:700">₹${Number(o.Total).toLocaleString('en-IN')}</td>
                         <td><span class="status-pill ${statusClass}">${o.Status || 'Pending'}</span></td>
+                        <td>${srHtml}</td>
                         <td>
                             <select class="status-select" onchange="updateStatus('${o.OrderID}', this.value, this)">
                                 <option value="Pending" ${o.Status === 'Pending' ? 'selected' : ''}>Pending</option>
@@ -981,6 +1070,22 @@
                     const itemsStr = items.map(it => `${it.name} (x${it.qty})`).join(', ');
                     const date = new Date(o.Date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
                     const statusClass = 'status-' + (o.Status || 'Pending').toLowerCase();
+
+                    const srMobileHtml = o.ShiprocketOrderID
+                        ? `<div class="order-card-row">
+                              <div class="order-card-label">Shiprocket</div>
+                              <div class="order-card-value">
+                                  <span style="font-weight:700; color:var(--ok)">ID: ${o.ShiprocketOrderID}</span>
+                                  <span style="font-size:11px; color:var(--muted); display:block;">Shipment: ${o.ShiprocketShipmentID}</span>
+                              </div>
+                           </div>`
+                        : (o.Status === 'Cancelled' ? '' : `
+                           <div class="order-card-row" style="margin-top:8px;">
+                              <div class="order-card-label">Shiprocket</div>
+                              <div class="order-card-value">
+                                  <button class="status-pill" style="border:none; cursor:pointer; font-weight:700; background:var(--primary); color:var(--white); padding:6px 12px; margin:0;" onclick="openShiprocketModal('${o.OrderID}')">Ship with Shiprocket</button>
+                              </div>
+                           </div>`);
 
                     return `
                         <div class="order-card" data-order-id="${o.OrderID}">
@@ -1008,6 +1113,7 @@
                                     <div class="order-card-label">Total</div>
                                     <div class="order-card-value order-card-total">₹${Number(o.Total).toLocaleString('en-IN')}</div>
                                 </div>
+                                ${srMobileHtml}
                             </div>
                             <div class="order-card-footer">
                                 <span class="status-pill ${statusClass}">${o.Status || 'Pending'}</span>
@@ -1393,6 +1499,91 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span>Save Changes</span>';
+            }
+        };
+
+        // ── SHIPROCKET MODAL HANDLERS ──
+        function openShiprocketModal(orderId) {
+            const o = allOrdersCache.find(order => String(order.OrderID) === String(orderId));
+            if (!o) {
+                alert('Order not found in cache.');
+                return;
+            }
+
+            document.getElementById('sr-order-id').value = o.OrderID;
+            document.getElementById('sr-customer-name').value = o.CustomerName || '';
+            document.getElementById('sr-address').value = o.Address || '';
+            document.getElementById('sr-city').value = o.City || '';
+            document.getElementById('sr-state').value = o.State || '';
+            document.getElementById('sr-pincode').value = o.Pincode || '';
+            document.getElementById('sr-payment-method').value = o.PaymentMethod || 'COD';
+            
+            // Set defaults
+            document.getElementById('sr-pickup-location').value = 'Primary';
+            document.getElementById('sr-weight').value = '0.5';
+            document.getElementById('sr-length').value = '10';
+            document.getElementById('sr-breadth').value = '10';
+            document.getElementById('sr-height').value = '5';
+
+            document.getElementById('shiprocket-overlay').style.display = 'flex';
+        }
+
+        function closeShiprocketModal() {
+            document.getElementById('shiprocket-overlay').style.display = 'none';
+        }
+
+        document.getElementById('shiprocketForm').onsubmit = async function(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('srSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spin" style="display:inline-block;"></div> <span>Pushing to Shiprocket...</span>';
+
+            const orderId = document.getElementById('sr-order-id').value;
+            const o = allOrdersCache.find(order => String(order.OrderID) === String(orderId));
+            if (!o) {
+                alert('Order not found.');
+                btn.disabled = false;
+                btn.innerHTML = '<span>Process Shiprocket Order</span>';
+                return;
+            }
+
+            const data = {
+                orderId: o.OrderID,
+                customerName: o.CustomerName,
+                phone: o.Phone,
+                email: o.Email,
+                address: o.Address,
+                city: o.City,
+                state: o.State,
+                pincode: o.Pincode,
+                country: o.Country || 'India',
+                items: o.Items,
+                total: o.Total,
+                paymentMethod: o.PaymentMethod,
+                date: o.Date,
+                
+                pickupLocation: document.getElementById('sr-pickup-location').value,
+                weight: parseFloat(document.getElementById('sr-weight').value),
+                length: parseInt(document.getElementById('sr-length').value),
+                breadth: parseInt(document.getElementById('sr-breadth').value),
+                height: parseInt(document.getElementById('sr-height').value)
+            };
+
+            try {
+                const res = await api('pushToShiprocket', data);
+                if (res.success) {
+                    alert(`✓ Shiprocket Order Created!\nOrder ID: ${res.shiprocketOrderId}\nShipment ID: ${res.shipmentId}`);
+                    closeShiprocketModal();
+                    loadOrders(); // Refresh table and cards
+                } else {
+                    alert('Shiprocket Error: ' + res.message);
+                }
+            } catch (err) {
+                alert('Connection Error: ' + err.toString());
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Process Shiprocket Order</span>';
             }
         };
 
